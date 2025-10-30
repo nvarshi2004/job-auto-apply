@@ -1,0 +1,41 @@
+name: Scrape Jobs
+
+on:
+  schedule:
+    # Run every day at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Run job scraper
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: |
+          cd backend
+          python -m app.scrapers.linkedin_scraper
+          python -m app.scrapers.indeed_scraper
+      
+      - name: Commit and push results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update scraped jobs [automated]"
+          git push
